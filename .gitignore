@@ -1,8 +1,11 @@
+venv/
+.vs/
 __pycache__/
 *.pyc
 *.pkl
 *.pt
 *.zip
 *.log
-*.csv
-social_sentiment_alert/logs/
+*.db
+*.lib
+*.dll
