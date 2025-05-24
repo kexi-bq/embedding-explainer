@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pkl
+*.pt
+*.zip
+*.log
+*.csv
+social_sentiment_alert/logs/
