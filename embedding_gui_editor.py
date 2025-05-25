@@ -5,6 +5,8 @@ from sentence_transformers import SentenceTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
 from classifier import MeaningClassifier
+from semantic_layers import SemanticMind
+import torch
 
 # === Загрузка модели ===
 st.title(" Embedding GUI Editor")
@@ -41,6 +43,11 @@ classifier = train_classifier()
 
 # === Получение эмбеддинга ===
 embedding = model.encode([input_text])[0]
+# === Многослойная обработка смысла ===
+mind_model = SemanticMind()
+embedding_torch = torch.tensor(embedding, dtype=torch.float32)
+modified_embedding = mind_model(embedding_torch).detach().numpy()
+
 original_embedding = embedding.copy()
 
 # Интерфейс маскировк
@@ -70,13 +77,15 @@ for dim in selected_dims:
         embedding[dim] *= -1
 
 # === Визуализация изменений ===
-st.subheader("Сравнение оригинала и модифицированного")
+# === Визуализация изменений ===
+st.subheader("Сравнение оригинала и модифицированного (SemanticMind)")
 fig, ax = plt.subplots(figsize=(10, 4))
 ax.plot(original_embedding, label="Original", alpha=0.6)
-ax.plot(embedding, label="Modified", alpha=0.6)
-ax.set_title("Embedding Vector Comparison")
+ax.plot(modified_embedding, label="Modified (SemanticMind)", alpha=0.6)
+ax.set_title("Embedding Vector Comparison with Semantic Layers")
 ax.legend()
 st.pyplot(fig)
+
 st.sidebar.subheader(" Координаты по категориям")
 
 for category, dims in coord_map.items():
@@ -87,7 +96,8 @@ for category, dims in coord_map.items():
 
 # === Предсказание смысла ===
 st.subheader("Предсказанный смысл")
-label, sublabel = classifier.predict(input_text)
+label, sublabel = classifier.predict_by_embedding(modified_embedding)
+
 
 description_map = {
     ("emotion", "positive"): "Выражает положительную эмоцию: радость, воодушевление, восхищение.",

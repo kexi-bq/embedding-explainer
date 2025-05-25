@@ -4,6 +4,8 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 from classifier import MeaningClassifier
+from capsule_embedding import CapsuleEmbedding
+
 
 # === Загрузка датасета ===
 df = pd.read_csv("dataset.csv")
@@ -14,6 +16,9 @@ sublabels = df["sublabel"].tolist()
 # === Обучение модели ===
 model = MeaningClassifier()
 embeddings = model.fit(texts, labels, sublabels)
+capsules = [CapsuleEmbedding(e).get_capsule_matrix() for e in embeddings]  # (384, 2)
+capsule_layer_1 = [cap[:, 1] for cap in capsules]  # Извлекаем 2-й слой (например, tanh)
+
 
 # === PCA-визуализация ===
 pca = PCA(n_components=2)
@@ -27,6 +32,8 @@ color_map = {
 
 plt.figure(figsize=(10, 8))
 for i in range(len(X_pca)):
+    # Соединяем линией точки из orig и capsule
+
     x, y = X_pca[i]
     color = color_map[labels[i]]
     plt.scatter(x, y, color=color)
@@ -34,6 +41,40 @@ for i in range(len(X_pca)):
 plt.title("PCA по эмбеддингам")
 plt.grid(True)
 plt.show()
+
+# === PCA сравнение оригинала и capsule_layer_1 ===
+X_pca_orig = PCA(n_components=2).fit_transform(embeddings)
+X_pca_caps = PCA(n_components=2).fit_transform(capsule_layer_1)
+
+diffs = np.linalg.norm(X_pca_orig - X_pca_caps, axis=1)
+print("Среднее смещение:", np.mean(diffs))
+
+
+fig, axs = plt.subplots(1, 2, figsize=(16, 6))
+
+# Рисуем точки
+for ax, X_pca, title in zip(
+    axs,
+    [X_pca_orig, X_pca_caps],
+    ["Обычные эмбеддинги", "Капсулы (слой Z=1, tanh)"]
+):
+    for i in range(len(X_pca)):
+        x, y = X_pca[i]
+        color = color_map[labels[i]]
+        ax.scatter(x, y, color=color)
+        ax.annotate(labels[i], (x + 0.01, y + 0.01), fontsize=7)
+    ax.set_title(title)
+    ax.grid(True)
+
+# Добавляем соединяющие линии только один раз
+for (x1, y1), (x2, y2) in zip(X_pca_orig, X_pca_caps):
+    axs[1].plot([x1, x2], [y1, y2], color="gray", linestyle="--", alpha=0.3)
+
+plt.suptitle("Сравнение PCA: embedding vs capsule-layer[1]", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+
 
 # === Предсказание нового текста ===
 test_text = "I can't stand how rude people are."
